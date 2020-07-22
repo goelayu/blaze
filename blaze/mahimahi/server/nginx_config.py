@@ -290,8 +290,8 @@ class HttpBlock(Block):
             block_name="http",
             block_args=[
                 ("sendfile", "on"),
-                ("access_log", "/var/log/nginx/access.log"),
-                ("error_log", "/var/log/nginx/error.log", "info"),
+                ("access_log", "/usr/local/openresty/nginx/logs/access.log"),
+                ("error_log", "/usr/local/openresty/nginx/logs/error.log", "info"),
             ],
         )
 

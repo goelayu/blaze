@@ -52,7 +52,7 @@ class Interfaces:
         for ip_addr in self.ip_addresses:
             self.log.debug("creating interface", device="lo", address=ip_addr)
             subprocess.run(
-                ["ip", "addr", "add", f"{ip_addr}/32", "dev", "lo"], check=True, stdout=sys.stderr, stderr=sys.stderr
+                ["sudo","ip", "addr", "add", f"{ip_addr}/32", "dev", "lo"], check=True, stdout=sys.stderr, stderr=sys.stderr
             )
 
     def delete_interfaces(self):
@@ -61,7 +61,7 @@ class Interfaces:
         """
         for ip_addr in self.ip_addresses:
             self.log.debug("deleting interface", device="lo", address=ip_addr)
-            subprocess.run(["ip", "addr", "del", f"{ip_addr}/32", "dev", "lo"], stdout=sys.stderr, stderr=sys.stderr)
+            subprocess.run(["sudo","ip", "addr", "del", f"{ip_addr}/32", "dev", "lo"], stdout=sys.stderr, stderr=sys.stderr)
 
     def __enter__(self):
         try:

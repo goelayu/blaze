@@ -9,6 +9,7 @@ import gzip
 from typing import Optional
 from urllib.parse import urlparse
 from io import BytesIO
+import time
 
 from bs4 import BeautifulSoup
 
@@ -181,19 +182,23 @@ def start_server(
         with open(conf_file, "w") as f:
             f.write(str(config))
 
+        log.info("path to nginx conf file", file=conf_file)
+
+        # time.sleep(10000)        
         # Create the interfaces, start the DNS server, and start the NGINX server
         with interfaces:
-            with DNSServer(host_ip_map):
+            with DNSServer(host_ip_map) as dns:
                 # If wait lasts for more than 0.5 seconds, a TimeoutError will be raised, which is okay since it
                 # means that nginx is running successfully. If it finishes sooner, it means it crashed and
                 # we should raise an exception
                 try:
                     proc = subprocess.Popen(
-                        ["/usr/local/openresty/nginx/sbin/nginx", "-c", conf_file], stdout=sys.stderr, stderr=sys.stderr
+                        ["sudo" , "/usr/local/openresty/nginx/sbin/nginx", "-c", conf_file], stdout=sys.stderr, stderr=sys.stderr
                     )
                     proc.wait(0.5)
                     raise RuntimeError("nginx exited unsuccessfully")
                 except subprocess.TimeoutExpired:
                     yield
                 finally:
+                    dns.proc.kill()
                     proc.terminate()
