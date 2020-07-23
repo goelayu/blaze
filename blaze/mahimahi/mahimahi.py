@@ -47,6 +47,7 @@ class MahiMahiConfig:
         :param extract_critical_requests: The HAR capturer should extract critical requests
         """
         return [
+            "sudo",
             "docker",
             "run",
             "--rm",

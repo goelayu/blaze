@@ -6,10 +6,11 @@ import subprocess
 import sys
 import tempfile
 import gzip
-from typing import Optional
+from typing import Optional, Dict
 from urllib.parse import urlparse
 from io import BytesIO
 import time
+import json
 
 from bs4 import BeautifulSoup
 
@@ -70,6 +71,7 @@ def start_server(
     cert_path: Optional[str] = None,
     key_path: Optional[str] = None,
     policy: Optional[Policy] = None,
+    per_resource_latency: Optional[str] = None,
     cache_time: Optional[int] = None,
     extract_critical_requests: Optional[bool] = False,
 ):
@@ -85,6 +87,7 @@ def start_server(
     log = logger.with_namespace("replay_server")
     push_policy = policy.as_dict["push"] if policy else {}
     preload_policy = policy.as_dict["preload"] if policy else {}
+    res_latency_map = json.loads(open(per_resource_latency,'r').read()) if per_resource_latency else {}
 
     # Load the file store into memory
     if not os.path.isdir(replay_dir):
@@ -104,10 +107,11 @@ def start_server(
         for host, files in filestore.files_by_host.items():
             log.info("creating host", host=host, address=host_ip_map[host])
             uris_served = set()
+            host_res_lmap = res_latency_map[host] if host in res_latency_map else {}
 
             # Create a server block for this host
             server = config.http_block.add_server(
-                server_name=host, server_addr=host_ip_map[host], cert_path=cert_path, key_path=key_path, root=file_dir
+                server_name=host, server_addr=host_ip_map[host], cert_path=cert_path, key_path=key_path, root=file_dir, res_latency_map=host_res_lmap
             )
 
             for file in files:
@@ -182,7 +186,7 @@ def start_server(
         with open(conf_file, "w") as f:
             f.write(str(config))
 
-        log.info("path to nginx conf file", file=conf_file)
+        log.debug("contents of nginx config", config=str(config))
 
         # time.sleep(10000)        
         # Create the interfaces, start the DNS server, and start the NGINX server
@@ -200,5 +204,8 @@ def start_server(
                 except subprocess.TimeoutExpired:
                     yield
                 finally:
-                    dns.proc.kill()
-                    proc.terminate()
+                    log.info("Killing dns server and nginx server")
+                    subprocess.call(["sudo","kill",str(proc.pid)])
+                    # subprocess.call(["sudo","kill","-9",str(dns.proc.pid)])
+                    # dns.proc.terminate()
+                    # proc.terminate()

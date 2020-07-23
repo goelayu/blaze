@@ -22,6 +22,10 @@ from . import command
     help="true or false to specify if server should inject critical request extractor",
     action="store_true",
 )
+@command.argument(
+    "--per_resource_latency",
+    help="The file path to JSON-formatted per resource server side latency"
+)
 @command.command
 def replay(args):
     """
@@ -31,6 +35,7 @@ def replay(args):
     policy = None
     cert_path = os.path.abspath(args.cert_path) if args.cert_path else None
     key_path = os.path.abspath(args.key_path) if args.key_path else None
+    per_resource_latency = os.path.abspath(args.per_resource_latency) if args.per_resource_latency else None
 
     if args.policy:
         log.debug("reading policy", push_policy=args.policy)
@@ -43,6 +48,7 @@ def replay(args):
         cert_path,
         key_path,
         policy,
+        per_resource_latency,
         cache_time=args.cache_time,
         extract_critical_requests=args.extract_critical_requests,
     ):

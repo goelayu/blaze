@@ -3,7 +3,7 @@ This module implements the syntax and composition of NGINX configuration blocks.
 helper functions to help compose those blocks and automatically generate the resulting configuration.
 """
 
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 
 
 def quote(s: str) -> str:
@@ -95,6 +95,7 @@ class LocationBlock(Block):
             indent_level=indent_level,
             block_name=f"location{matcher}{uri}",
             block_args=[
+                # ("echo_sleep","2"),
                 ("default_type", content_type),
                 ("try_files", f"{file_name} =404" if not redirect_uri else None),
                 ("return", f"301 {redirect_uri}" if redirect_uri else None),
@@ -146,10 +147,27 @@ class RedirectByLuaBlock(Block):
     Implements redirection using LUA since NGINX does not give us the exact matching we need
     """
 
-    def __init__(self, *, indent_level: int):
+    def __init__(self, *, indent_level: int, res_latency_map: Dict [str,str]):
         super().__init__(indent_level=indent_level, block_name="rewrite_by_lua_block")
         self.rewrite_rules = {}
         self.script_template = [
+            "local res_latency =  {",
+            self._generate_res_latency_map(res_latency_map),
+            "}",
+            "local function mimic_res_server_latency(uri)",
+            [   
+                "ngx.log(ngx.INFO,'checking for latency for uri', uri)",
+                "t = res_latency[uri]",
+                "ngx.log(ngx.INFO, 'value of sleep', t)",
+                "if t ~= null then", 
+                [
+                    "ngx.log(ngx.INFO, 'sleeping for ',t)",
+                    "ngx.sleep(tonumber(t)/1000)"
+                    # "os.execute('sleep ' .. tonumber(t)/1000)"
+                ],
+                "end"
+            ],
+            "end",
             "local function common_prefix_len(a, b)",
             [
                 "local m = math.min(string.len(a), string.len(b))",
@@ -165,7 +183,7 @@ class RedirectByLuaBlock(Block):
             "}",
             "local uri = ngx.unescape_uri(ngx.var.request_uri)",
             "for k, v in pairs(uri_map) do",
-            ["if k == uri then", ["ngx.log(ngx.INFO, 'exact redirect ', uri, ' ', v)", "ngx.exec(v)", "return"], "end"],
+            ["if k == uri then", ["mimic_res_server_latency(k)","ngx.log(ngx.INFO, 'exact redirect ', uri, ' ', v)", "ngx.exec(v)", "return"], "end"],
             "end",
             "",
             "local best_match = nil",
@@ -184,7 +202,7 @@ class RedirectByLuaBlock(Block):
             "end",
             "",
             "if best_match then",
-            ["ngx.log(ngx.INFO, 'best match redirect ', uri, ' ', best_match)", "ngx.exec(best_match)"],
+            ["mimic_res_server_latency(uri)","ngx.log(ngx.INFO, 'best match redirect ', uri, ' ', best_match)", "ngx.exec(best_match)"],
             "end",
         ]
 
@@ -224,6 +242,10 @@ class RedirectByLuaBlock(Block):
     def _generate_lua_rewrite_rules(self):
         return [f"[ngx.unescape_uri('{k}')] = '{v}'," for k, v in self.rewrite_rules.items()]
 
+    def _generate_res_latency_map(self, res_latency_map):
+        return [f"[ngx.unescape_uri('{k}')] = {v}," for k,v in res_latency_map.items()]
+
+
 
 class ServerBlock(Block):
     """
@@ -240,6 +262,7 @@ class ServerBlock(Block):
         cert_path: Optional[str] = None,
         key_path: Optional[str] = None,
         root: Optional[str] = None,
+        res_latency_map: Dict[str,str]
     ):
         super().__init__(
             indent_level=indent_level,
@@ -257,7 +280,7 @@ class ServerBlock(Block):
         self.sub_blocks.append(TypesBlock(indent_level=self.indent_level + 1))
 
         # Create a catch-all block that will try to match the incoming request to the correct response using Lua
-        self.lua_block = RedirectByLuaBlock(indent_level=self.indent_level + 2)
+        self.lua_block = RedirectByLuaBlock(indent_level=self.indent_level + 2, res_latency_map=res_latency_map)
         self.sub_blocks.append(
             LocationBlock(indent_level=self.indent_level + 1, uri="/", exact_match=False, sub_blocks=[self.lua_block])
         )
