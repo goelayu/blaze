@@ -2,7 +2,7 @@ setup:
 	./scripts/setup.sh
 
 http2push:
-	docker build -t http2push -f tools/capture_har/Dockerfile .
+	sudo docker build -t http2push -f tools/capture_har/Dockerfile .
 
 tree_diff:
 	docker build -t tree_diff -f tools/tree_diff/Dockerfile .

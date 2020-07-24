@@ -262,13 +262,14 @@ class ServerBlock(Block):
         cert_path: Optional[str] = None,
         key_path: Optional[str] = None,
         root: Optional[str] = None,
-        res_latency_map: Dict[str,str]
+        res_latency_map: Dict[str,str],
+        enable_http2: Optional[str] = None
     ):
         super().__init__(
             indent_level=indent_level,
             block_name="server",
             block_args=[
-                ("listen", f"{server_addr}:443 ssl http2"),
+                ("listen", f"{server_addr}:443", enable_http2),
                 ("server_name", server_name),
                 ("ssl_certificate", cert_path),
                 ("ssl_certificate_key", key_path),

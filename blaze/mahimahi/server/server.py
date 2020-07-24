@@ -74,6 +74,7 @@ def start_server(
     per_resource_latency: Optional[str] = None,
     cache_time: Optional[int] = None,
     extract_critical_requests: Optional[bool] = False,
+    enable_http2: Optional[bool] = False
 ):
     """
     Reads the given replay directory and sets up the NGINX server to replay it. This function also
@@ -108,10 +109,11 @@ def start_server(
             log.info("creating host", host=host, address=host_ip_map[host])
             uris_served = set()
             host_res_lmap = res_latency_map[host] if host in res_latency_map else {}
+            http2_directive = "ssl http2" if enable_http2 else "ssl"
 
             # Create a server block for this host
             server = config.http_block.add_server(
-                server_name=host, server_addr=host_ip_map[host], cert_path=cert_path, key_path=key_path, root=file_dir, res_latency_map=host_res_lmap
+                server_name=host, server_addr=host_ip_map[host], cert_path=cert_path, key_path=key_path, root=file_dir, res_latency_map=host_res_lmap, enable_http2=http2_directive
             )
 
             for file in files:
@@ -186,7 +188,7 @@ def start_server(
         with open(conf_file, "w") as f:
             f.write(str(config))
 
-        log.debug("contents of nginx config", config=str(config))
+        # log.debug("contents of nginx config", config=str(config))
 
         # time.sleep(10000)        
         # Create the interfaces, start the DNS server, and start the NGINX server
@@ -205,7 +207,7 @@ def start_server(
                     yield
                 finally:
                     log.info("Killing dns server and nginx server")
-                    subprocess.call(["sudo","kill",str(proc.pid)])
-                    # subprocess.call(["sudo","kill","-9",str(dns.proc.pid)])
+                    # subprocess.call(["sudo","kill",str(proc.pid)])
+                    # subprocess.call(["sudo","kill","-SIGKILL",str(proc.pid)])
                     # dns.proc.terminate()
                     # proc.terminate()

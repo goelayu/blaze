@@ -26,6 +26,11 @@ from . import command
     "--per_resource_latency",
     help="The file path to JSON-formatted per resource server side latency"
 )
+@command.argument(
+    "--enable_http2",
+    help="enable support for http2",
+    action="store_true"
+)
 @command.command
 def replay(args):
     """
@@ -51,6 +56,7 @@ def replay(args):
         per_resource_latency,
         cache_time=args.cache_time,
         extract_critical_requests=args.extract_critical_requests,
+        enable_http2=args.enable_http2
     ):
         while True:
             time.sleep(86400)

@@ -27,7 +27,7 @@ class DNSServer:
         for host, ip_addr in self.host_ip_map.items():
             args.extend(["-A", f"/{host}/{ip_addr}"])
 
-        self.proc = subprocess.Popen(["dnsmasq", *args], stdout=sys.stderr, stderr=sys.stderr)
+        self.proc = subprocess.Popen(["sudo","dnsmasq", *args], stdout=sys.stderr, stderr=sys.stderr)
 
         # If wait lasts for more than 1 second, a TimeoutError will be raised, which is okay since it
         # means that dnsmasq is running successfully. If it finishes sooner, it means it crashed and
@@ -39,5 +39,7 @@ class DNSServer:
             pass
 
     def __exit__(self, exception_type, exception_value, traceback):
-        self.proc.kill()
-        self.proc.wait()
+        pass
+        # subprocess.call(["sudo","kill","-9",str(self.proc.pid)],shell=True)
+        # self.proc.kill()
+        # self.proc.wait()
