@@ -199,7 +199,7 @@ def start_server(
                 # we should raise an exception
                 try:
                     proc = subprocess.Popen(
-                        ["sudo" , "/usr/local/openresty/nginx/sbin/nginx", "-c", conf_file], stdout=sys.stderr, stderr=sys.stderr
+                        ["/usr/local/openresty/nginx/sbin/nginx", "-c", conf_file], stdout=sys.stderr, stderr=sys.stderr
                     )
                     proc.wait(0.5)
                     raise RuntimeError("nginx exited unsuccessfully")
@@ -210,4 +210,4 @@ def start_server(
                     # subprocess.call(["sudo","kill",str(proc.pid)])
                     # subprocess.call(["sudo","kill","-SIGKILL",str(proc.pid)])
                     # dns.proc.terminate()
-                    # proc.terminate()
+                    proc.terminate()
