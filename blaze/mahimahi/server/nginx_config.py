@@ -154,20 +154,7 @@ class RedirectByLuaBlock(Block):
             "local res_latency =  {",
             self._generate_res_latency_map(res_latency_map),
             "}",
-            "local function mimic_res_server_latency(uri)",
-            [   
-                "ngx.log(ngx.INFO,'checking for latency for uri', uri)",
-                "t = res_latency[uri]",
-                "ngx.log(ngx.INFO, 'value of sleep', t)",
-                "if t ~= null then", 
-                [
-                    "ngx.log(ngx.INFO, 'sleeping for ',t)",
-                    "ngx.sleep(tonumber(t)/1000)"
-                    # "os.execute('sleep ' .. tonumber(t)/1000)"
-                ],
-                "end"
-            ],
-            "end",
+            "",
             "local function common_prefix_len(a, b)",
             [
                 "local m = math.min(string.len(a), string.len(b))",
@@ -175,6 +162,38 @@ class RedirectByLuaBlock(Block):
                 ["if a[i] ~= b[i] then", ["return i"], "end"],
                 "end",
                 "return m",
+            ],
+            "end",
+            "",
+            "local function mimic_res_server_latency(uri)",
+            [   
+                "ngx.log(ngx.INFO,'checking for latency for uri', uri)",
+                "t = res_latency[uri]",
+                # "if t == null then",
+                # [
+                #     "local match_len = 0",
+                #     "for k, v in pairs(res_latency) do",
+                #     [
+                #         "if string.match(k, '^.*%?') == string.match(uri, '^.*%?') then",
+                #         [
+                #             "local l = common_prefix_len(k, uri)",
+                #             "if l > match_len then",
+                #             ["match_len = l","t = v"],
+                #             "end",
+                #         ],
+                #         "end",
+                #     ],
+                #     "end",
+                # ],
+                # "end",
+                "ngx.log(ngx.INFO, 'value of sleep ', t)",
+                "if t ~= null then", 
+                [
+                    "ngx.log(ngx.INFO, 'sleeping for ',t)",
+                    "ngx.sleep(tonumber(t)/1000)"
+                    # "os.execute('sleep ' .. tonumber(t)/1000)"
+                ],
+                "end"
             ],
             "end",
             "",
@@ -188,13 +207,15 @@ class RedirectByLuaBlock(Block):
             "",
             "local best_match = nil",
             "local match_len = 0",
+            "local best_match_uri = nil",
             "for k, v in pairs(uri_map) do",
             [
                 "if string.match(k, '^.*%?') == string.match(uri, '^.*%?') then",
                 [
+                    "ngx.log(ngx.INFO,'string matched for ', uri, ' ', string.match(k, '^.*%?'), ' ', string.match(uri, '^.*%?'))"
                     "local l = common_prefix_len(k, uri)",
                     "if l > match_len then",
-                    ["match_len = l", "best_match = v"],
+                    ["match_len = l", "best_match = v","best_match_uri = k"],
                     "end",
                 ],
                 "end",
@@ -202,7 +223,9 @@ class RedirectByLuaBlock(Block):
             "end",
             "",
             "if best_match then",
-            ["mimic_res_server_latency(uri)","ngx.log(ngx.INFO, 'best match redirect ', uri, ' ', best_match)", "ngx.exec(best_match)"],
+            [
+                "mimic_res_server_latency(best_match_uri)","ngx.log(ngx.INFO, 'best match redirect for ', uri,' is ',best_match_uri, ' ', best_match)", "ngx.exec(best_match)"
+            ],
             "end",
         ]
 

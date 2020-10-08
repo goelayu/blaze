@@ -109,7 +109,7 @@ def start_server(
             log.info("creating host", host=host, address=host_ip_map[host])
             uris_served = set()
             host_res_lmap = res_latency_map[host] if host in res_latency_map else {}
-            http2_directive = "ssl http2" if enable_http2 else "ssl"
+            http2_directive = "ssl http2" if enable_http2 and host != "archive.org" and host != "analytics.archive.org" else "ssl"
 
             # Create a server block for this host
             server = config.http_block.add_server(
@@ -133,7 +133,7 @@ def start_server(
                 )
 
                 # Create entry for this resource
-                if file.status < 300:
+                if file.status < 300 or file.status >= 400:
                     loc = server.add_location_block(
                         uri=file.uri, file_name=file.file_name, content_type=file.headers.get("content-type", None)
                     )
@@ -188,6 +188,8 @@ def start_server(
         with open(conf_file, "w") as f:
             f.write(str(config))
 
+        # with open("/tmp/dummy", "w") as f:
+        #     f.write(str(config))
         # log.debug("contents of nginx config", config=str(config))
 
         # time.sleep(10000)        

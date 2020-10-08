@@ -26,6 +26,11 @@ class DNSServer:
         args = ["-k", "-R"]
         for host, ip_addr in self.host_ip_map.items():
             args.extend(["-A", f"/{host}/{ip_addr}"])
+        
+        # --keep-in-foreground --no-resolv --no-hosts
+        args.extend(["--no-resolv"])
+        args.extend(["--keep-in-foreground"])
+        args.extend(["--no-hosts"])
 
         self.proc = subprocess.Popen(["dnsmasq", *args], stdout=sys.stderr, stderr=sys.stderr)
 
