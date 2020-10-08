@@ -2,12 +2,19 @@
 import json
 import time
 import os
+import signal
 
 from blaze.action import Policy
 from blaze.logger import logger as log
 from blaze.mahimahi.server import start_server
 
 from . import command
+
+
+def sigterm_handler(signum, frame):
+    cur_pid = os.getpid()
+    #Sending keyboard interrupt to current process
+    os.kill(cur_pid, signal.SIGINT)
 
 
 @command.argument("replay_dir", help="The directory containing the save files captured by mahimahi")
@@ -48,6 +55,9 @@ def replay(args):
             policy_dict = json.load(policy_file)
         policy = Policy.from_dict(policy_dict)
 
+
+    # handle sigterm gracefully
+    signal.signal(signal.SIGTERM, sigterm_handler)
     with start_server(
         args.replay_dir,
         cert_path,
