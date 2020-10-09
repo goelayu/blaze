@@ -169,23 +169,23 @@ class RedirectByLuaBlock(Block):
             [   
                 "ngx.log(ngx.INFO,'checking for latency for uri', uri)",
                 "t = res_latency[uri]",
-                # "if t == null then",
-                # [
-                #     "local match_len = 0",
-                #     "for k, v in pairs(res_latency) do",
-                #     [
-                #         "if string.match(k, '^.*%?') == string.match(uri, '^.*%?') then",
-                #         [
-                #             "local l = common_prefix_len(k, uri)",
-                #             "if l > match_len then",
-                #             ["match_len = l","t = v"],
-                #             "end",
-                #         ],
-                #         "end",
-                #     ],
-                #     "end",
-                # ],
-                # "end",
+                "if t == null then",
+                [
+                    "local match_len = 0",
+                    "for k, v in pairs(res_latency) do",
+                    [
+                        "if string.match(k, '^.*%?') == string.match(uri, '^.*%?') and string.match(uri, '^.*%?') ~= null then",
+                        [
+                            "local l = common_prefix_len(k, uri)",
+                            "if l > match_len then",
+                            ["match_len = l","t = v"],
+                            "end",
+                        ],
+                        "end",
+                    ],
+                    "end",
+                ],
+                "end",
                 "ngx.log(ngx.INFO, 'value of sleep ', t)",
                 "if t ~= null then", 
                 [
@@ -210,9 +210,9 @@ class RedirectByLuaBlock(Block):
             "local best_match_uri = nil",
             "for k, v in pairs(uri_map) do",
             [
-                "if string.match(k, '^.*%?') == string.match(uri, '^.*%?') then",
+                "if string.match(k, '^.*%?') == string.match(uri, '^.*%?') and string.match(uri, '^.*%?') ~= null then",
                 [
-                    "ngx.log(ngx.INFO,'string matched for ', uri, ' ', string.match(k, '^.*%?'), ' ', string.match(uri, '^.*%?'))"
+                    "ngx.log(ngx.INFO,'string matched for ', uri, ' ', string.match(k, '^.*%?'), ' ', string.match(uri, '^.*%?'))",
                     "local l = common_prefix_len(k, uri)",
                     "if l > match_len then",
                     ["match_len = l", "best_match = v","best_match_uri = k"],
@@ -225,6 +225,10 @@ class RedirectByLuaBlock(Block):
             "if best_match then",
             [
                 "mimic_res_server_latency(best_match_uri)","ngx.log(ngx.INFO, 'best match redirect for ', uri,' is ',best_match_uri, ' ', best_match)", "ngx.exec(best_match)"
+            ],
+            "else",
+            [
+                "ngx.log(ngx.INFO, 'No match found for ', uri)"
             ],
             "end",
         ]
