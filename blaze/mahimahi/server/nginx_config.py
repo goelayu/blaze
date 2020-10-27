@@ -201,8 +201,9 @@ class RedirectByLuaBlock(Block):
             self._generate_lua_rewrite_rules,
             "}",
             "local uri = ngx.unescape_uri(ngx.var.request_uri)",
+            "ngx.log(ngx.INFO, 'uri and scheme is', ngx.var.request_uri,  ngx.var.scheme)",
             "for k, v in pairs(uri_map) do",
-            ["if k == uri then", ["mimic_res_server_latency(k)","ngx.log(ngx.INFO, 'exact redirect ', uri, ' ', v)", "ngx.exec(v)", "return"], "end"],
+            ["if k == uri..'___'..ngx.var.scheme then", ["mimic_res_server_latency(k)","ngx.log(ngx.INFO, 'exact redirect ', uri, ' ', v)", "ngx.exec(v)", "return"], "end"],
             "end",
             "",
             "local best_match = nil",
@@ -210,7 +211,7 @@ class RedirectByLuaBlock(Block):
             "local best_match_uri = nil",
             "for k, v in pairs(uri_map) do",
             [
-                "if string.match(k, '^.*%?') == string.match(uri, '^.*%?') and string.match(uri, '^.*%?') ~= null then",
+                "if string.match(k, '^.*%?') == string.match(uri..'___'..ngx.var.scheme, '^.*%?') and string.match(uri..'___'..ngx.var.scheme, '^.*%?') ~= null then",
                 [
                     "ngx.log(ngx.INFO,'string matched for ', uri, ' ', string.match(k, '^.*%?'), ' ', string.match(uri, '^.*%?'))",
                     "local l = common_prefix_len(k, uri)",
@@ -233,14 +234,14 @@ class RedirectByLuaBlock(Block):
             "end",
         ]
 
-    def add_rewrite_rule(self, from_uri: str, to_uri: str):
+    def add_rewrite_rule(self, from_uri: str, scheme: str, to_uri: str):
         """
         Add a rewrite rule implemented in Lua
 
         :param from_uri: The original URI
         :param to_uri: The URI to map to
         """
-        self.rewrite_rules[from_uri] = to_uri
+        self.rewrite_rules[from_uri+'___'+scheme] = to_uri
 
     def _body_lines(self):
         def expand(rules: List, level: int):
@@ -296,6 +297,7 @@ class ServerBlock(Block):
             indent_level=indent_level,
             block_name="server",
             block_args=[
+                ("listen", f"{server_addr}:80"),
                 ("listen", f"{server_addr}:443", enable_http2),
                 ("server_name", server_name),
                 ("ssl_certificate", cert_path),
@@ -322,8 +324,9 @@ class ServerBlock(Block):
         """
         # Create a URI mapping first
         new_uri = f"/_internal_{len(self.sub_blocks)}"
-        self.lua_block.add_rewrite_rule(kwargs["uri"], new_uri)
+        self.lua_block.add_rewrite_rule(kwargs["uri"], kwargs["scheme"], new_uri)
         kwargs.pop("uri")
+        kwargs.pop("scheme")
         # Then create the location block
         block = LocationBlock(indent_level=self.indent_level + 1, uri=new_uri, **kwargs)
         self.sub_blocks.append(block)

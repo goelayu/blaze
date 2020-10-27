@@ -122,7 +122,7 @@ def start_server(
                 if file.uri in uris_served or len(file.uri) > 3600 or len(file.headers.get("location", "")) > 3600:
                     continue
 
-                uris_served.add(file.uri)
+                uris_served.add(file.uri+file.scheme)
                 log.debug(
                     "serve",
                     file_name=file.file_name,
@@ -135,10 +135,10 @@ def start_server(
                 # Create entry for this resource
                 if file.status < 300 or file.status >= 400:
                     loc = server.add_location_block(
-                        uri=file.uri, file_name=file.file_name, content_type=file.headers.get("content-type", None)
+                        uri=file.uri, scheme=file.scheme, file_name=file.file_name, content_type=file.headers.get("content-type", None)
                     )
                 elif "location" in file.headers:
-                    loc = server.add_location_block(uri=file.uri, redirect_uri=file.headers["location"])
+                    loc = server.add_location_block(uri=file.uri, scheme=file.scheme, redirect_uri=file.headers["location"])
                 else:
                     log.warn("skipping", file_name=file.file_name, method=file.method, uri=file.uri, host=file.host)
                     continue
